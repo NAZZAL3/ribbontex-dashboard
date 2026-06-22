@@ -1,0 +1,19 @@
+{
+  "name": "ribbontex-dashboard",
+  "private": true,
+  "version": "1.0.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "concurrently \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
+    "dev:client": "npm run dev --prefix client",
+    "dev:server": "npm run dev --prefix server",
+    "build": "npm install --prefix client && npm run build --prefix client",
+    "start": "node server/index.js",
+    "start:local": "npm run build && npm run start"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.0"
+  }
+}
