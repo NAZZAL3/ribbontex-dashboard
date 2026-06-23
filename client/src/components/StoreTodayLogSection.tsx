@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Clock, Pencil } from 'lucide-react';
+import { Clock, Pencil, Printer } from 'lucide-react';
 import { api } from '../api/client';
 import type { StoreVisit } from '../types';
 import { StoreVisitEditModal } from './StoreVisitEditModal';
 import { formatCurrency, formatTime } from '../utils/whatsapp';
 import { formatStoreReason } from '../utils/storeReason';
+import { printStoreLog } from '../utils/printStoreLog';
 
 export function StoreTodayLogSection() {
   const { t, i18n } = useTranslation();
@@ -35,15 +36,56 @@ export function StoreTodayLogSection() {
     return `${t('store.noBuy')} — ${formatStoreReason(visit.reason, t)}`;
   }
 
+  const handlePrint = () => {
+    const today = new Date().toLocaleDateString(lang === 'ar' ? 'ar-JO' : 'en-JO', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+    const buyers = visits.filter((v) => v.outcome === 'bought').length;
+    const revenue = visits
+      .filter((v) => v.outcome === 'bought')
+      .reduce((sum, v) => sum + (v.value ?? 0), 0);
+
+    printStoreLog({
+      title: t('dashboard.tabTodayLog'),
+      subtitle: today,
+      summary: `${visits.length} ${t('store.totalVisitors').toLowerCase()} · ${buyers} ${t('store.bought').toLowerCase()} · ${formatCurrency(revenue, lang)}`,
+      printedAtLabel: t('dashboard.printedOn'),
+      printedAt: new Date().toLocaleString(lang === 'ar' ? 'ar-JO' : 'en-JO'),
+      timeColumn: t('store.dateTime'),
+      entryColumn: t('store.outcome'),
+      lang,
+      flatRows: visits.map((visit) => ({
+        time: formatTime(visit.created_at, lang),
+        detail: visitLabel(visit),
+        bought: visit.outcome === 'bought',
+      })),
+    });
+  };
+
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <p className="text-sm text-brown-muted">{t('dashboard.todayLogHint')}</p>
-        {!loading && visits.length > 0 && (
-          <span className="text-sm text-brown-muted">
-            {visits.length} {t('store.entries')}
-          </span>
-        )}
+        <div className="flex items-center gap-3">
+          {!loading && visits.length > 0 && (
+            <>
+              <span className="text-sm text-brown-muted">
+                {visits.length} {t('store.entries')}
+              </span>
+              <button
+                type="button"
+                onClick={handlePrint}
+                className="flex items-center gap-2 rounded-lg border border-brown-border bg-cream px-4 py-2 text-sm font-medium text-brown transition hover:border-brown hover:bg-brown-soft"
+              >
+                <Printer className="h-4 w-4" />
+                {t('dashboard.printTodayLog')}
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       {loading ? (

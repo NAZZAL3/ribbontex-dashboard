@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ChevronDown, ChevronRight, Clock } from 'lucide-react';
+import { ChevronDown, ChevronRight, Clock, Printer } from 'lucide-react';
 import { api } from '../api/client';
 import type { StoreHistoryDay } from '../types';
-import { formatCurrency, formatTime } from '../utils/whatsapp';
+import { formatCurrency, formatTime, formatHourLabel } from '../utils/whatsapp';
 import { formatStoreReason } from '../utils/storeReason';
+import { printStoreLog } from '../utils/printStoreLog';
 
 function formatDateLabel(dateStr: string, lang: string): string {
   return new Date(dateStr + 'T12:00:00').toLocaleDateString(lang === 'ar' ? 'ar-JO' : 'en-JO', {
@@ -12,15 +13,7 @@ function formatDateLabel(dateStr: string, lang: string): string {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
-  });
-}
-
-function formatHourLabel(hour: string, lang: string): string {
-  const date = new Date();
-  date.setHours(parseInt(hour, 10), 0, 0, 0);
-  return date.toLocaleTimeString(lang === 'ar' ? 'ar-JO' : 'en-JO', {
-    hour: 'numeric',
-    hour12: true,
+    numberingSystem: 'latn',
   });
 }
 
@@ -32,6 +25,7 @@ export function StoreHistorySection() {
   const [loading, setLoading] = useState(true);
   const [openDates, setOpenDates] = useState<Set<string>>(new Set());
   const [openHours, setOpenHours] = useState<Set<string>>(new Set());
+  const [printDate, setPrintDate] = useState('');
 
   useEffect(() => {
     setLoading(true);
@@ -41,6 +35,9 @@ export function StoreHistorySection() {
         setDays(data.days);
         if (data.days.length > 0) {
           setOpenDates(new Set([data.days[0].date]));
+          setPrintDate(data.days[0].date);
+        } else {
+          setPrintDate('');
         }
       })
       .catch(console.error)
@@ -65,6 +62,37 @@ export function StoreHistorySection() {
     });
   };
 
+  const visitDetail = (visit: { outcome: string; value: number | null; reason: string | null }) => {
+    if (visit.outcome === 'bought') {
+      return `${t('store.bought')} — ${formatCurrency(visit.value ?? 0, lang)}`;
+    }
+    return `${t('store.noBuy')} — ${formatStoreReason(visit.reason, t)}`;
+  };
+
+  const handlePrint = () => {
+    const day = days.find((d) => d.date === printDate);
+    if (!day) return;
+
+    printStoreLog({
+      title: t('dashboard.tabStoreHistory'),
+      subtitle: formatDateLabel(day.date, lang),
+      summary: `${day.totalVisitors} ${t('store.totalVisitors').toLowerCase()} · ${day.totalBuyers} ${t('store.bought').toLowerCase()} · ${formatCurrency(day.revenue, lang)}`,
+      printedAtLabel: t('dashboard.printedOn'),
+      printedAt: new Date().toLocaleString(lang === 'ar' ? 'ar-JO' : 'en-JO'),
+      timeColumn: t('store.dateTime'),
+      entryColumn: t('store.outcome'),
+      lang,
+      hourGroups: day.hours.map((hourGroup) => ({
+        hour: formatHourLabel(hourGroup.hour, lang),
+        rows: hourGroup.visits.map((visit) => ({
+          time: formatTime(visit.created_at, lang),
+          detail: visitDetail(visit),
+          bought: visit.outcome === 'bought',
+        })),
+      })),
+    });
+  };
+
   if (loading) {
     return (
       <div className="flex h-40 items-center justify-center">
@@ -77,16 +105,43 @@ export function StoreHistorySection() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <p className="text-sm text-brown-muted">{t('dashboard.storeHistoryHint')}</p>
-        <select
-          value={period}
-          onChange={(e) => setPeriod(e.target.value)}
-          className="rounded-lg border border-brown-border bg-cream px-4 py-2 text-sm text-brown outline-none focus:border-brown"
-        >
-          <option value="7">{t('dashboard.period', { days: 7 })}</option>
-          <option value="30">{t('dashboard.period', { days: 30 })}</option>
-          <option value="90">{t('dashboard.period', { days: 90 })}</option>
-          <option value="365">{t('dashboard.period', { days: 365 })}</option>
-        </select>
+        <div className="flex flex-wrap items-center gap-3">
+          <select
+            value={period}
+            onChange={(e) => setPeriod(e.target.value)}
+            className="rounded-lg border border-brown-border bg-cream px-4 py-2 text-sm text-brown outline-none focus:border-brown"
+          >
+            <option value="7">{t('dashboard.period', { days: 7 })}</option>
+            <option value="30">{t('dashboard.period', { days: 30 })}</option>
+            <option value="90">{t('dashboard.period', { days: 90 })}</option>
+            <option value="365">{t('dashboard.period', { days: 365 })}</option>
+          </select>
+          {days.length > 0 && (
+            <>
+              <select
+                value={printDate}
+                onChange={(e) => setPrintDate(e.target.value)}
+                className="rounded-lg border border-brown-border bg-cream px-4 py-2 text-sm text-brown outline-none focus:border-brown"
+                aria-label={t('dashboard.selectDateToPrint')}
+              >
+                {days.map((day) => (
+                  <option key={day.date} value={day.date}>
+                    {formatDateLabel(day.date, lang)}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={handlePrint}
+                disabled={!printDate}
+                className="flex items-center gap-2 rounded-lg border border-brown-border bg-cream px-4 py-2 text-sm font-medium text-brown transition hover:border-brown hover:bg-brown-soft disabled:opacity-50"
+              >
+                <Printer className="h-4 w-4" />
+                {t('dashboard.printHistory')}
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       {days.length === 0 ? (
@@ -162,9 +217,7 @@ export function StoreHistorySection() {
                                       {visit.outcome === 'bought' ? '✅' : '❌'}
                                     </span>
                                     <span className="text-sm font-medium text-brown sm:text-base">
-                                      {visit.outcome === 'bought'
-                                        ? `${t('store.bought')} — ${formatCurrency(visit.value ?? 0, lang)}`
-                                        : `${t('store.noBuy')} — ${formatStoreReason(visit.reason, t)}`}
+                                      {visitDetail(visit)}
                                     </span>
                                   </div>
                                   <span className="shrink-0 text-sm text-brown-muted" dir="ltr">

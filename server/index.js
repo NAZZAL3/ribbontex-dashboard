@@ -7,6 +7,7 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { initDb, getDb } from './db.js';
+import { ammanNow, ammanToday, ammanDateDaysAgo } from './timezone.js';
 
 dotenv.config();
 
@@ -262,6 +263,7 @@ function isValidStoredReason(reason) {
 }
 
 function getStoreAnalytics(db) {
+  const today = ammanToday();
   const stats = db
     .prepare(
       `SELECT
@@ -269,9 +271,9 @@ function getStoreAnalytics(db) {
         SUM(CASE WHEN outcome = 'bought' THEN 1 ELSE 0 END) as totalBuyers,
         COALESCE(SUM(CASE WHEN outcome = 'bought' THEN value ELSE 0 END), 0) as revenueToday
        FROM store_visits
-       WHERE date(created_at) = date('now', 'localtime')`
+       WHERE date(created_at) = ?`
     )
-    .get();
+    .get(today);
 
   const totalVisitors = stats.totalVisitors || 0;
   const totalBuyers = stats.totalBuyers || 0;
@@ -288,10 +290,10 @@ function getStoreAnalytics(db) {
       .prepare(
         `SELECT reason, COUNT(*) as count
          FROM store_visits
-         WHERE date(created_at) = date('now', 'localtime') AND outcome = 'no_buy'
+         WHERE date(created_at) = ? AND outcome = 'no_buy'
          GROUP BY reason ORDER BY count DESC`
       )
-      .all(),
+      .all(today),
     byHour: db
       .prepare(
         `SELECT strftime('%H', created_at) as hour,
@@ -299,10 +301,10 @@ function getStoreAnalytics(db) {
           SUM(CASE WHEN outcome = 'bought' THEN 1 ELSE 0 END) as buyers,
           COALESCE(SUM(CASE WHEN outcome = 'bought' THEN value ELSE 0 END), 0) as revenue
          FROM store_visits
-         WHERE date(created_at) = date('now', 'localtime')
+         WHERE date(created_at) = ?
          GROUP BY hour ORDER BY hour`
       )
-      .all(),
+      .all(today),
   };
 }
 
@@ -327,14 +329,16 @@ app.post('/api/store-visits', authMiddleware, (req, res) => {
   }
 
   const db = getDb();
+  const now = ammanNow();
   const result = db
     .prepare(
-      `INSERT INTO store_visits (outcome, value, reason, created_at) VALUES (?, ?, ?, datetime('now', 'localtime'))`
+      `INSERT INTO store_visits (outcome, value, reason, created_at) VALUES (?, ?, ?, ?)`
     )
     .run(
       outcome,
       outcome === 'bought' ? Number(value) : null,
-      outcome === 'no_buy' ? reasonToStore : null
+      outcome === 'no_buy' ? reasonToStore : null,
+      now
     );
 
   const visit = db.prepare('SELECT * FROM store_visits WHERE id = ?').get(result.lastInsertRowid);
@@ -343,13 +347,14 @@ app.post('/api/store-visits', authMiddleware, (req, res) => {
 
 app.get('/api/store-visits/today-log', authMiddleware, (req, res) => {
   const db = getDb();
+  const today = ammanToday();
   const visits = db
     .prepare(
       `SELECT * FROM store_visits
-       WHERE date(created_at) = date('now', 'localtime')
+       WHERE date(created_at) = ?
        ORDER BY created_at DESC`
     )
-    .all();
+    .all(today);
   res.json({ visits });
 });
 
@@ -359,13 +364,14 @@ app.get('/api/store-visits/analytics', authMiddleware, ownerMiddleware, (req, re
 });
 
 function buildStoreHistory(db, days = 30) {
+  const cutoff = ammanDateDaysAgo(days);
   const visits = db
     .prepare(
       `SELECT * FROM store_visits
-       WHERE date(created_at) >= date('now', 'localtime', '-' || ? || ' days')
+       WHERE date(created_at) >= ?
        ORDER BY created_at DESC`
     )
-    .all(days);
+    .all(cutoff);
 
   const dateMap = new Map();
 

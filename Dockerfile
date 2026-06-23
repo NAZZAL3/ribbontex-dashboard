@@ -22,6 +22,7 @@ RUN npm run build --prefix client
 ENV NODE_ENV=production
 ENV PORT=3001
 ENV DATA_DIR=/app/server/data
+ENV TZ=Asia/Amman
 
 EXPOSE 3001
 

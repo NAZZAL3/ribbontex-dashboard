@@ -53,18 +53,26 @@ export function initDb() {
   `);
 
   const userCount = db.prepare('SELECT COUNT(*) as c FROM users').get().c;
+  syncAdminUser(db);
   if (userCount === 0) {
-    const username = process.env.ADMIN_USERNAME || 'admin';
-    const password = process.env.ADMIN_PASSWORD || 'Ribbontex2026!';
-    const hash = bcrypt.hashSync(password, 10);
-    db.prepare('INSERT INTO users (username, password_hash) VALUES (?, ?)').run(username, hash);
-    console.log(`Default admin created — username: ${username}`);
-    console.log('Change password via ADMIN_USERNAME / ADMIN_PASSWORD in server/.env');
+    console.log('Admin user initialized from ADMIN_USERNAME / ADMIN_PASSWORD');
   }
 
   const orderCount = db.prepare('SELECT COUNT(*) as c FROM orders').get().c;
   if (orderCount === 0) {
     seedSampleOrders(db);
+  }
+}
+
+function syncAdminUser(db) {
+  const username = process.env.ADMIN_USERNAME || 'admin';
+  const password = process.env.ADMIN_PASSWORD || 'Ribbontex2026!';
+  const hash = bcrypt.hashSync(password, 10);
+  const existing = db.prepare('SELECT id FROM users WHERE username = ?').get(username);
+  if (existing) {
+    db.prepare('UPDATE users SET password_hash = ? WHERE username = ?').run(hash, username);
+  } else {
+    db.prepare('INSERT INTO users (username, password_hash) VALUES (?, ?)').run(username, hash);
   }
 }
 

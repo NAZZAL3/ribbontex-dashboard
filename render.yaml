@@ -11,6 +11,8 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      - key: TZ
+        value: Asia/Amman
       - key: JWT_SECRET
         generateValue: true
       - key: ADMIN_USERNAME

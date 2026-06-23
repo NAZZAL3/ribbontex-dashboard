@@ -44,7 +44,12 @@
     "tabStoreHistory": "سجل المحل",
     "todayLogHint": "سجل مباشر لزيارات المحل اليوم — تعديل أو حذف الإدخالات",
     "storeHistoryHint": "جميع زيارات المحل محفوظة حسب التاريخ والساعة",
-    "noStoreHistory": "لا توجد زيارات مسجلة بعد"
+    "noStoreHistory": "لا توجد زيارات مسجلة بعد",
+    "printLog": "طباعة",
+    "printTodayLog": "طباعة سجل اليوم",
+    "printHistory": "طباعة التاريخ المحدد",
+    "selectDateToPrint": "اختر التاريخ",
+    "printedOn": "طُبع في"
   },
   "owner": {
     "title": "دخول المالك",

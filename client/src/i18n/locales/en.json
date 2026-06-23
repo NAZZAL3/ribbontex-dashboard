@@ -44,7 +44,12 @@
     "tabStoreHistory": "Store history",
     "todayLogHint": "Live log of today's store visits — edit or remove entries",
     "storeHistoryHint": "All store visits saved by date and hour",
-    "noStoreHistory": "No store visits recorded yet"
+    "noStoreHistory": "No store visits recorded yet",
+    "printLog": "Print",
+    "printTodayLog": "Print today's log",
+    "printHistory": "Print selected date",
+    "selectDateToPrint": "Select date",
+    "printedOn": "Printed on"
   },
   "owner": {
     "title": "Owner access",

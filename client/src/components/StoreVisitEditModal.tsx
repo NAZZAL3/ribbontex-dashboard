@@ -140,7 +140,7 @@ export function StoreVisitEditModal({ visit, onClose, onSave, onDelete }: StoreV
               <input
                 type="number"
                 min="0"
-                step="0.5"
+                step="0.01"
                 value={value}
                 onChange={(e) => setValue(e.target.value)}
                 className={inputClass}

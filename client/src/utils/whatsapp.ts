@@ -51,10 +51,32 @@ export function formatCurrency(value: number, lang: string): string {
   return `${value.toFixed(2)} ${lang === 'ar' ? 'د.أ' : 'JD'}`;
 }
 
-export function formatTime(dateStr: string, lang: string): string {
-  return new Date(dateStr.replace(' ', 'T')).toLocaleTimeString(lang === 'ar' ? 'ar-JO' : 'en-JO', {
-    hour: '2-digit',
+const STORE_TZ = 'Asia/Amman';
+
+export function parseStoreDateTime(dateStr: string): Date {
+  const trimmed = dateStr.trim();
+  const normalized = trimmed.includes('T') ? trimmed : trimmed.replace(' ', 'T');
+  if (!/[zZ]|[+-]\d{2}:\d{2}$/.test(normalized)) {
+    return new Date(`${normalized}+03:00`);
+  }
+  return new Date(normalized);
+}
+
+export function formatTime(dateStr: string, _lang?: string): string {
+  return parseStoreDateTime(dateStr).toLocaleTimeString('en-US', {
+    hour: 'numeric',
     minute: '2-digit',
+    hour12: true,
+    timeZone: STORE_TZ,
+  });
+}
+
+export function formatHourLabel(hour: string, _lang?: string): string {
+  const padded = hour.padStart(2, '0');
+  return parseStoreDateTime(`2000-01-01T${padded}:00:00`).toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    hour12: true,
+    timeZone: STORE_TZ,
   });
 }
 

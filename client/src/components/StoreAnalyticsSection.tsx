@@ -2,17 +2,8 @@ import { useTranslation } from 'react-i18next';
 import { Users, ShoppingBag, TrendingUp, DollarSign, Clock, UserX, BarChart3 } from 'lucide-react';
 import type { StoreTodayStats } from '../types';
 import { StatCard } from './StatCard';
-import { formatCurrency } from '../utils/whatsapp';
+import { formatCurrency, formatHourLabel } from '../utils/whatsapp';
 import { formatStoreReason } from '../utils/storeReason';
-
-function formatHourLabel(hour: string, lang: string): string {
-  const date = new Date();
-  date.setHours(parseInt(hour, 10), 0, 0, 0);
-  return date.toLocaleTimeString(lang === 'ar' ? 'ar-JO' : 'en-JO', {
-    hour: 'numeric',
-    hour12: true,
-  });
-}
 
 export function StoreAnalyticsSection({ stats, lang }: { stats: StoreTodayStats; lang: string }) {
   const { t } = useTranslation();
