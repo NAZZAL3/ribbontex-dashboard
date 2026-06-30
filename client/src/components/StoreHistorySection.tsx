@@ -5,7 +5,7 @@ import { api } from '../api/client';
 import type { StoreHistoryDay } from '../types';
 import { formatCurrency, formatTime, formatHourLabel } from '../utils/whatsapp';
 import { formatStoreReason } from '../utils/storeReason';
-import { printStoreLog } from '../utils/printStoreLog';
+import { printStoreLog, buildPrintRows, buildPrintStats, buildReasonBreakdown } from '../utils/printStoreLog';
 
 function formatDateLabel(dateStr: string, lang: string): string {
   return new Date(dateStr + 'T12:00:00').toLocaleDateString(lang === 'ar' ? 'ar-JO' : 'en-JO', {
@@ -73,23 +73,35 @@ export function StoreHistorySection() {
     const day = days.find((d) => d.date === printDate);
     if (!day) return;
 
+    const dayVisits = day.hours.flatMap((h) => h.visits);
+
     printStoreLog({
       title: t('dashboard.tabStoreHistory'),
       subtitle: formatDateLabel(day.date, lang),
-      summary: `${day.totalVisitors} ${t('store.totalVisitors').toLowerCase()} · ${day.totalBuyers} ${t('store.bought').toLowerCase()} · ${formatCurrency(day.revenue, lang)}`,
       printedAtLabel: t('dashboard.printedOn'),
-      printedAt: new Date().toLocaleString(lang === 'ar' ? 'ar-JO' : 'en-JO'),
+      printedAt: new Date().toLocaleString('en-US', { timeZone: 'Asia/Amman' }),
       timeColumn: t('store.dateTime'),
       entryColumn: t('store.outcome'),
       lang,
-      hourGroups: day.hours.map((hourGroup) => ({
-        hour: formatHourLabel(hourGroup.hour, lang),
-        rows: hourGroup.visits.map((visit) => ({
-          time: formatTime(visit.created_at, lang),
-          detail: visitDetail(visit),
-          bought: visit.outcome === 'bought',
-        })),
-      })),
+      stats: buildPrintStats(
+        dayVisits,
+        {
+          visitors: t('store.totalVisitors'),
+          buyers: t('store.totalBuyers'),
+          conversion: t('store.conversionRate'),
+          revenue: t('store.revenueToday'),
+          avgSale: t('store.avgSale'),
+          noBuy: t('store.noBuyCount'),
+          noBuyRate: t('store.noBuyRate'),
+          peakHour: t('store.peakHour'),
+        },
+        formatCurrency,
+        lang
+      ),
+      rows: buildPrintRows(dayVisits, (v) => formatTime(v.created_at, lang), visitDetail),
+      reasonBreakdown: buildReasonBreakdown(dayVisits, (v) =>
+        v.outcome === 'no_buy' ? formatStoreReason(v.reason, t) : ''
+      ),
     });
   };
 

@@ -36,6 +36,10 @@ app.use(
 );
 app.use(express.json());
 
+app.get('/api/health', (_req, res) => {
+  res.json({ ok: true });
+});
+
 function authMiddleware(req, res, next) {
   const header = req.headers.authorization;
   if (!header?.startsWith('Bearer ')) {
@@ -473,7 +477,7 @@ if (fs.existsSync(clientDist)) {
   });
 }
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`Ribbontex API running on http://localhost:${PORT}`);
   if (fs.existsSync(clientDist)) {
     console.log(`Dashboard served at http://localhost:${PORT}`);

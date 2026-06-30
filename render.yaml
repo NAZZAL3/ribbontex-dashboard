@@ -3,7 +3,7 @@ services:
     name: ribbontex-dashboard
     runtime: docker
     plan: starter
-    healthCheckPath: /
+    healthCheckPath: /api/health
     disk:
       name: ribbontex-data
       mountPath: /app/server/data

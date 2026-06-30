@@ -6,7 +6,7 @@ import type { StoreVisit } from '../types';
 import { StoreVisitEditModal } from './StoreVisitEditModal';
 import { formatCurrency, formatTime } from '../utils/whatsapp';
 import { formatStoreReason } from '../utils/storeReason';
-import { printStoreLog } from '../utils/printStoreLog';
+import { printStoreLog, buildPrintRows, buildPrintStats, buildReasonBreakdown } from '../utils/printStoreLog';
 
 export function StoreTodayLogSection() {
   const { t, i18n } = useTranslation();
@@ -42,26 +42,36 @@ export function StoreTodayLogSection() {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
+      numberingSystem: 'latn',
     });
-    const buyers = visits.filter((v) => v.outcome === 'bought').length;
-    const revenue = visits
-      .filter((v) => v.outcome === 'bought')
-      .reduce((sum, v) => sum + (v.value ?? 0), 0);
 
     printStoreLog({
       title: t('dashboard.tabTodayLog'),
       subtitle: today,
-      summary: `${visits.length} ${t('store.totalVisitors').toLowerCase()} · ${buyers} ${t('store.bought').toLowerCase()} · ${formatCurrency(revenue, lang)}`,
       printedAtLabel: t('dashboard.printedOn'),
-      printedAt: new Date().toLocaleString(lang === 'ar' ? 'ar-JO' : 'en-JO'),
+      printedAt: new Date().toLocaleString('en-US', { timeZone: 'Asia/Amman' }),
       timeColumn: t('store.dateTime'),
       entryColumn: t('store.outcome'),
       lang,
-      flatRows: visits.map((visit) => ({
-        time: formatTime(visit.created_at, lang),
-        detail: visitLabel(visit),
-        bought: visit.outcome === 'bought',
-      })),
+      stats: buildPrintStats(
+        visits,
+        {
+          visitors: t('store.totalVisitors'),
+          buyers: t('store.totalBuyers'),
+          conversion: t('store.conversionRate'),
+          revenue: t('store.revenueToday'),
+          avgSale: t('store.avgSale'),
+          noBuy: t('store.noBuyCount'),
+          noBuyRate: t('store.noBuyRate'),
+          peakHour: t('store.peakHour'),
+        },
+        formatCurrency,
+        lang
+      ),
+      rows: buildPrintRows(visits, (v) => formatTime(v.created_at, lang), visitLabel),
+      reasonBreakdown: buildReasonBreakdown(visits, (v) =>
+        v.outcome === 'no_buy' ? formatStoreReason(v.reason, t) : ''
+      ),
     });
   };
 

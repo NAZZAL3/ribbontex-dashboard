@@ -24,7 +24,24 @@ async function request<T>(
     if (ownerToken) headers['X-Owner-Token'] = ownerToken;
   }
 
-  const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 25000);
+
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}${path}`, {
+      ...options,
+      headers,
+      signal: controller.signal,
+    });
+  } catch (err) {
+    if (err instanceof Error && err.name === 'AbortError') {
+      throw new Error('Server is starting up — wait a moment and try again');
+    }
+    throw new Error('Cannot reach server — check your connection and try again');
+  } finally {
+    clearTimeout(timeout);
+  }
 
   if (res.status === 401) {
     localStorage.removeItem('ribbontex_token');
