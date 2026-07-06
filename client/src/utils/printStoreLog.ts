@@ -121,16 +121,11 @@ function hourKey(createdAt: string): string {
   return createdAt.slice(11, 13);
 }
 
-function buildCompactTable(
+function buildTableBody(
   rows: PrintVisitRow[],
-  timeColumn: string,
-  entryColumn: string,
+  startIndex: number,
   lang: string
 ): string {
-  if (rows.length === 0) {
-    return '<p class="empty">—</p>';
-  }
-
   const body: string[] = [];
   let lastHour = '';
 
@@ -144,23 +139,52 @@ function buildCompactTable(
     }
     body.push(
       `<tr>
-        <td class="num">${index + 1}</td>
+        <td class="num">${startIndex + index + 1}</td>
         <td class="time" dir="ltr">${escapeHtml(row.time)}</td>
         <td>${row.bought ? '✅' : '❌'} ${escapeHtml(row.detail)}</td>
       </tr>`
     );
   });
 
-  return `<table class="visits">
-    <thead>
+  return body.join('');
+}
+
+function buildCompactTable(
+  rows: PrintVisitRow[],
+  timeColumn: string,
+  entryColumn: string,
+  lang: string
+): string {
+  if (rows.length === 0) {
+    return '<p class="empty">—</p>';
+  }
+
+  const midpoint = Math.ceil(rows.length / 2);
+  const leftRows = rows.slice(0, midpoint);
+  const rightRows = rows.slice(midpoint);
+
+  const tableHead = `<thead>
       <tr>
         <th class="num">#</th>
         <th>${escapeHtml(timeColumn)}</th>
         <th>${escapeHtml(entryColumn)}</th>
       </tr>
-    </thead>
-    <tbody>${body.join('')}</tbody>
+    </thead>`;
+
+  const leftTable = `<table class="visits">
+    ${tableHead}
+    <tbody>${buildTableBody(leftRows, 0, lang)}</tbody>
   </table>`;
+
+  const rightTable =
+    rightRows.length > 0
+      ? `<table class="visits">
+    ${tableHead}
+    <tbody>${buildTableBody(rightRows, midpoint, lang)}</tbody>
+  </table>`
+      : '';
+
+  return `<div class="visits-columns">${leftTable}${rightTable}</div>`;
 }
 
 function buildPrintHtml(options: PrintStoreLogOptions): string {
@@ -210,56 +234,62 @@ function buildPrintHtml(options: PrintStoreLogOptions): string {
       font-family: "Inter", "Noto Sans Arabic", Arial, sans-serif;
       color: #4c3b31;
       margin: 10px 12px;
-      font-size: 10px;
-      line-height: 1.25;
+      font-size: 13px;
+      line-height: 1.35;
     }
-    h1 { font-size: 15px; margin-bottom: 2px; }
-    h2 { font-size: 11px; font-weight: normal; color: #7a6a5e; margin-bottom: 8px; }
-    .meta { color: #7a6a5e; font-size: 9px; margin-bottom: 8px; }
+    h1 { font-size: 20px; margin-bottom: 3px; }
+    h2 { font-size: 15px; font-weight: normal; color: #7a6a5e; margin-bottom: 10px; }
+    .meta { color: #7a6a5e; font-size: 12px; margin-bottom: 10px; }
     .stats {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
-      gap: 4px;
-      margin-bottom: 8px;
+      gap: 6px;
+      margin-bottom: 10px;
     }
     .stat {
       border: 1px solid #cfc4b4;
       border-radius: 4px;
-      padding: 4px 6px;
+      padding: 6px 8px;
       background: #f5eed8;
     }
-    .stat-label { display: block; font-size: 8px; color: #7a6a5e; }
-    .stat-value { display: block; font-size: 10px; font-weight: 600; margin-top: 1px; }
-    .reasons { margin-bottom: 8px; }
-    .reasons-title { font-size: 9px; font-weight: 600; margin-bottom: 3px; }
-    .reasons-list { display: flex; flex-wrap: wrap; gap: 4px; }
+    .stat-label { display: block; font-size: 11px; color: #7a6a5e; }
+    .stat-value { display: block; font-size: 14px; font-weight: 600; margin-top: 2px; }
+    .reasons { margin-bottom: 10px; }
+    .reasons-title { font-size: 12px; font-weight: 600; margin-bottom: 4px; }
+    .reasons-list { display: flex; flex-wrap: wrap; gap: 5px; }
     .reason-chip {
-      font-size: 9px;
+      font-size: 12px;
       border: 1px solid #cfc4b4;
       border-radius: 3px;
-      padding: 2px 5px;
+      padding: 3px 7px;
       background: #fffced;
+    }
+    .visits-columns {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      align-items: start;
     }
     table.visits { width: 100%; border-collapse: collapse; }
     table.visits th, table.visits td {
       border: 1px solid #cfc4b4;
-      padding: 2px 5px;
+      padding: 4px 6px;
       text-align: start;
       vertical-align: middle;
     }
     table.visits th {
       background: #ebe3d4;
       font-weight: 600;
-      font-size: 9px;
+      font-size: 12px;
     }
-    table.visits td { font-size: 9px; }
-    table.visits td.num { width: 22px; text-align: center; color: #7a6a5e; }
-    table.visits td.time { white-space: nowrap; width: 58px; }
+    table.visits td { font-size: 12px; }
+    table.visits td.num { width: 26px; text-align: center; color: #7a6a5e; }
+    table.visits td.time { white-space: nowrap; width: 64px; }
     tr.hour-divider td {
       background: #ebe3d4;
       font-weight: 600;
-      font-size: 8px;
-      padding: 2px 5px;
+      font-size: 11px;
+      padding: 3px 6px;
       color: #4c3b31;
       border-color: #cfc4b4;
     }
