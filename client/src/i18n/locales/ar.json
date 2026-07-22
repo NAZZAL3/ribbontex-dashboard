@@ -49,7 +49,9 @@
     "printTodayLog": "طباعة سجل اليوم",
     "printHistory": "طباعة التاريخ المحدد",
     "selectDateToPrint": "اختر التاريخ",
-    "printedOn": "طُبع في"
+    "printedOn": "طُبع في",
+    "exportStoreHistory": "تصدير سجل المحل CSV",
+    "exporting": "جاري التصدير…"
   },
   "owner": {
     "title": "دخول المالك",
@@ -99,7 +101,9 @@
     "delete": "حذف",
     "copyMsg": "نسخ الرسالة",
     "noOrders": "لا توجد طلبات",
-    "confirmDelete": "حذف هذا الطلب؟"
+    "confirmDelete": "حذف هذا الطلب؟",
+    "exportCustomers": "تصدير العملاء CSV",
+    "exporting": "جاري التصدير…"
   },
   "store": {
     "title": "تتبع الزبائن",

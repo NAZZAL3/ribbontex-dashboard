@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Copy, Check, Trash2, CheckCircle, XCircle } from 'lucide-react';
+import { Copy, Check, Trash2, CheckCircle, XCircle, Download } from 'lucide-react';
 import { api } from '../api/client';
 import type { Order } from '../types';
 import { formatWhatsAppMessage, formatDate, formatCurrency, formatOrderLocation } from '../utils/whatsapp';
@@ -17,6 +17,7 @@ export function OrdersList({ showTitle = true }: OrdersListProps) {
   const [status, setStatus] = useState('all');
   const [loading, setLoading] = useState(true);
   const [copiedId, setCopiedId] = useState<number | null>(null);
+  const [exporting, setExporting] = useState(false);
 
   const loadOrders = () => {
     setLoading(true);
@@ -52,6 +53,17 @@ export function OrdersList({ showTitle = true }: OrdersListProps) {
     loadOrders();
   };
 
+  const handleExportCustomers = async () => {
+    setExporting(true);
+    try {
+      await api.exportCustomersCsv();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : t('common.error'));
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const statusColors = {
     pending: 'bg-cream-dark text-brown',
     delivered: 'bg-brown-soft text-brown',
@@ -80,6 +92,15 @@ export function OrdersList({ showTitle = true }: OrdersListProps) {
           <option value="delivered">{t('orders.delivered')}</option>
           <option value="cancelled">{t('orders.cancelled')}</option>
         </select>
+        <button
+          type="button"
+          onClick={handleExportCustomers}
+          disabled={exporting}
+          className="inline-flex items-center gap-2 rounded-lg border border-brown-border bg-cream px-4 py-2.5 text-sm font-medium text-brown transition hover:bg-brown-soft disabled:opacity-60"
+        >
+          <Download className="h-4 w-4" />
+          {exporting ? t('orders.exporting') : t('orders.exportCustomers')}
+        </button>
       </div>
 
       {loading ? (

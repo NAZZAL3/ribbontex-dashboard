@@ -79,6 +79,77 @@ export const api = {
     return request<import('../types').Order[]>(`/orders${qs}`);
   },
 
+  exportCustomersCsv: async () => {
+    const token = getToken();
+    const headers: Record<string, string> = {};
+    if (token) headers.Authorization = `Bearer ${token}`;
+
+    const res = await fetch(`${API_BASE}/customers/export`, { headers });
+    if (res.status === 401) {
+      localStorage.removeItem('ribbontex_token');
+      window.location.href = '/login';
+      throw new Error('Unauthorized');
+    }
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || 'Export failed');
+    }
+
+    const blob = await res.blob();
+    const disposition = res.headers.get('Content-Disposition') || '';
+    const match = disposition.match(/filename="?([^"]+)"?/);
+    const filename = match?.[1] || `ribbontex-customers-${new Date().toISOString().slice(0, 10)}.csv`;
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  },
+
+  exportStoreHistoryCsv: async (days = '30') => {
+    const token = getToken();
+    const ownerToken = getOwnerToken();
+    const headers: Record<string, string> = {};
+    if (token) headers.Authorization = `Bearer ${token}`;
+    if (ownerToken) headers['X-Owner-Token'] = ownerToken;
+
+    const res = await fetch(`${API_BASE}/store-visits/export?days=${encodeURIComponent(days)}`, {
+      headers,
+    });
+    if (res.status === 401) {
+      localStorage.removeItem('ribbontex_token');
+      window.location.href = '/login';
+      throw new Error('Unauthorized');
+    }
+    if (res.status === 403) {
+      clearOwnerToken();
+      throw new Error('Owner access required');
+    }
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || 'Export failed');
+    }
+
+    const blob = await res.blob();
+    const disposition = res.headers.get('Content-Disposition') || '';
+    const match = disposition.match(/filename="?([^"]+)"?/);
+    const filename =
+      match?.[1] || `ribbontex-store-history-${new Date().toISOString().slice(0, 10)}.csv`;
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  },
+
   createOrder: (payload: import('../types').CreateOrderPayload) =>
     request<import('../types').Order>('/orders', {
       method: 'POST',

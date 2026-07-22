@@ -130,6 +130,70 @@ app.get('/api/orders', authMiddleware, (req, res) => {
   res.json(orders);
 });
 
+function csvEscape(value) {
+  const text = value == null ? '' : String(value);
+  if (/[",\n\r]/.test(text)) {
+    return `"${text.replace(/"/g, '""')}"`;
+  }
+  return text;
+}
+
+app.get('/api/customers/export', authMiddleware, (_req, res) => {
+  const db = getDb();
+  const customers = db
+    .prepare(
+      `SELECT
+         customer_phone AS phone,
+         COUNT(*) AS order_count,
+         ROUND(SUM(CASE WHEN status != 'cancelled' THEN value ELSE 0 END), 2) AS total_spent,
+         MIN(created_at) AS first_order,
+         MAX(created_at) AS last_order,
+         (
+           SELECT area FROM orders o2
+           WHERE o2.customer_phone = o.customer_phone
+           ORDER BY o2.created_at DESC
+           LIMIT 1
+         ) AS last_location,
+         GROUP_CONCAT(DISTINCT NULLIF(TRIM(area), '')) AS locations
+       FROM orders o
+       WHERE TRIM(customer_phone) != ''
+       GROUP BY customer_phone
+       ORDER BY order_count DESC, last_order DESC`
+    )
+    .all();
+
+  const header = [
+    'phone',
+    'order_count',
+    'total_spent_jd',
+    'first_order',
+    'last_order',
+    'last_location',
+    'locations',
+  ];
+
+  const lines = [
+    header.join(','),
+    ...customers.map((row) =>
+      [
+        csvEscape(row.phone),
+        csvEscape(row.order_count),
+        csvEscape(row.total_spent ?? 0),
+        csvEscape(row.first_order),
+        csvEscape(row.last_order),
+        csvEscape(row.last_location ?? ''),
+        csvEscape(row.locations ?? ''),
+      ].join(',')
+    ),
+  ];
+
+  const csv = `\uFEFF${lines.join('\n')}`;
+  const stamp = ammanToday().replace(/-/g, '');
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="ribbontex-customers-${stamp}.csv"`);
+  res.send(csv);
+});
+
 app.post('/api/orders', authMiddleware, (req, res) => {
   const { location, value, customerPhone, occasion, notes } = req.body;
 
@@ -415,6 +479,47 @@ app.get('/api/store-visits/history', authMiddleware, ownerMiddleware, (req, res)
   const db = getDb();
   const days = Number(req.query.days) || 30;
   res.json(buildStoreHistory(db, days));
+});
+
+app.get('/api/store-visits/export', authMiddleware, ownerMiddleware, (req, res) => {
+  const db = getDb();
+  const days = Number(req.query.days) || 30;
+  const cutoff = ammanDateDaysAgo(days);
+  const visits = db
+    .prepare(
+      `SELECT id, outcome, value, reason, created_at
+       FROM store_visits
+       WHERE date(created_at) >= ?
+       ORDER BY created_at DESC`
+    )
+    .all(cutoff);
+
+  const header = ['id', 'date', 'time', 'outcome', 'value_jd', 'reason'];
+  const lines = [
+    header.join(','),
+    ...visits.map((row) => {
+      const created = String(row.created_at || '');
+      const date = created.slice(0, 10);
+      const time = created.slice(11, 19) || created.slice(11, 16);
+      return [
+        csvEscape(row.id),
+        csvEscape(date),
+        csvEscape(time),
+        csvEscape(row.outcome),
+        csvEscape(row.outcome === 'bought' ? row.value ?? 0 : ''),
+        csvEscape(row.outcome === 'no_buy' ? row.reason ?? '' : ''),
+      ].join(',');
+    }),
+  ];
+
+  const csv = `\uFEFF${lines.join('\n')}`;
+  const stamp = ammanToday().replace(/-/g, '');
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader(
+    'Content-Disposition',
+    `attachment; filename="ribbontex-store-history-${days}d-${stamp}.csv"`
+  );
+  res.send(csv);
 });
 
 app.patch('/api/store-visits/:id', authMiddleware, (req, res) => {

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ChevronDown, ChevronRight, Clock, Printer } from 'lucide-react';
+import { ChevronDown, ChevronRight, Clock, Download, Printer } from 'lucide-react';
 import { api } from '../api/client';
 import type { StoreHistoryDay } from '../types';
 import { formatCurrency, formatTime, formatHourLabel } from '../utils/whatsapp';
@@ -26,6 +26,7 @@ export function StoreHistorySection() {
   const [openDates, setOpenDates] = useState<Set<string>>(new Set());
   const [openHours, setOpenHours] = useState<Set<string>>(new Set());
   const [printDate, setPrintDate] = useState('');
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -105,6 +106,17 @@ export function StoreHistorySection() {
     });
   };
 
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      await api.exportStoreHistoryCsv(period);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : t('common.error'));
+    } finally {
+      setExporting(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex h-40 items-center justify-center">
@@ -128,6 +140,15 @@ export function StoreHistorySection() {
             <option value="90">{t('dashboard.period', { days: 90 })}</option>
             <option value="365">{t('dashboard.period', { days: 365 })}</option>
           </select>
+          <button
+            type="button"
+            onClick={handleExport}
+            disabled={exporting || days.length === 0}
+            className="flex items-center gap-2 rounded-lg border border-brown-border bg-cream px-4 py-2 text-sm font-medium text-brown transition hover:border-brown hover:bg-brown-soft disabled:opacity-50"
+          >
+            <Download className="h-4 w-4" />
+            {exporting ? t('dashboard.exporting') : t('dashboard.exportStoreHistory')}
+          </button>
           {days.length > 0 && (
             <>
               <select

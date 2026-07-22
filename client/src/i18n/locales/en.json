@@ -49,7 +49,9 @@
     "printTodayLog": "Print today's log",
     "printHistory": "Print selected date",
     "selectDateToPrint": "Select date",
-    "printedOn": "Printed on"
+    "printedOn": "Printed on",
+    "exportStoreHistory": "Export store history CSV",
+    "exporting": "Exporting…"
   },
   "owner": {
     "title": "Owner access",
@@ -99,7 +101,9 @@
     "delete": "Delete",
     "copyMsg": "Copy message",
     "noOrders": "No orders found",
-    "confirmDelete": "Delete this order?"
+    "confirmDelete": "Delete this order?",
+    "exportCustomers": "Export customers CSV",
+    "exporting": "Exporting…"
   },
   "store": {
     "title": "Store Tracker",
